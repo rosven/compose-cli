@@ -17,7 +17,12 @@
 package errdefs
 
 import (
+	"io/fs"
+
 	"github.com/pkg/errors"
+
+	composeerrdefs "github.com/compose-spec/compose-go/errdefs"
+	"github.com/docker/compose-cli/cli/metrics"
 )
 
 const (
@@ -50,6 +55,34 @@ var (
 	// with the wrong type
 	ErrWrongContextType = errors.New("wrong context type")
 )
+
+type ComposefileParseError struct {
+	Err error
+}
+
+func (e ComposefileParseError) Unwrap() error { return e.Err }
+func (e ComposefileParseError) Error() string { return e.Err.Error() }
+
+func (e ComposefileParseError) getMetricsStatusExitCode() (string, int) {
+	var pathError *fs.PathError
+	if errors.As(e.Err, &pathError) {
+		return metrics.FileNotFoundFailure, 14
+	}
+	if composeerrdefs.IsNotFoundError(e.Err) {
+		return metrics.FileNotFoundFailure, 14
+	}
+	return metrics.ComposeParseFailureStatus, 15
+}
+
+func (e ComposefileParseError) GetMetricsStatus() string {
+	status, _ := e.getMetricsStatusExitCode()
+	return status
+}
+
+func (e ComposefileParseError) GetExitCode() int {
+	_, exitCode := e.getMetricsStatusExitCode()
+	return exitCode
+}
 
 // IsNotFoundError returns true if the unwrapped error is ErrNotFound
 func IsNotFoundError(err error) bool {

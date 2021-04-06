@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/docker/compose-cli/api/context/store"
+	"github.com/docker/compose-cli/api/errdefs"
 	"github.com/docker/compose-cli/cli/formatter"
 )
 
@@ -67,6 +68,13 @@ func (o *projectOptions) toProjectName() (string, error) {
 }
 
 func (o *projectOptions) toProject(services []string, po ...cli.ProjectOptionsFn) (*types.Project, error) {
+	res, err := o.toProjectInternal(services, po...)
+	if err != nil {
+		err = errdefs.ComposefileParseError{Err: err}
+	}
+	return res, err
+}
+func (o *projectOptions) toProjectInternal(services []string, po ...cli.ProjectOptionsFn) (*types.Project, error) {
 	options, err := o.toProjectOptions(po...)
 	if err != nil {
 		return nil, err

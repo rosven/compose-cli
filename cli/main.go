@@ -286,6 +286,12 @@ $ docker context create %s <name>`, cc.Type(), store.EcsContextType), ctype)
 }
 
 func exit(ctx string, err error, ctype string) {
+	var composeErr errdefs.ComposefileParseError
+	if errors.As(err, &composeErr) {
+		metrics.Track(ctype, os.Args[1:], composeErr.GetMetricsStatus())
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(composeErr.GetExitCode())
+	}
 	if exit, ok := err.(cmd.ExitCodeError); ok {
 		metrics.Track(ctype, os.Args[1:], metrics.SuccessStatus)
 		os.Exit(exit.ExitCode)

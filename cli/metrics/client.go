@@ -50,11 +50,15 @@ func init() {
 const (
 	// APISource is sent for API metrics
 	APISource = "api"
-	// SuccessStatus is sent for API metrics
+	// SuccessStatus command success
 	SuccessStatus = "success"
-	// FailureStatus is sent for API metrics
+	// FailureStatus command failure
 	FailureStatus = "failure"
-	// CanceledStatus is sent for API metrics
+	// ComposeParseFailureStatus failure while parsing compose file
+	ComposeParseFailureStatus = "compose-parse-failure"
+	// FileNotFoundFailure failure getting compose file
+	FileNotFoundFailure = "file-not-found-failure"
+	// CanceledStatus command canceled
 	CanceledStatus = "canceled"
 )
 

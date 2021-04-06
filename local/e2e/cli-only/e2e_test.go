@@ -212,6 +212,43 @@ func TestContextMetrics(t *testing.T) {
 	})
 }
 
+func TestComposeMetrics(t *testing.T) {
+	c := NewParallelE2eCLI(t, binDir)
+	s := NewMetricsServer(c.MetricsSocket())
+	s.Start()
+	defer s.Stop()
+
+	started := false
+	for i := 0; i < 30; i++ {
+		c.RunDockerCmd("help", "ps")
+		if len(s.GetUsage()) > 0 {
+			started = true
+			fmt.Printf("	[%s] Server up in %d ms\n", t.Name(), i*100)
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	assert.Assert(t, started, "Metrics mock server not available after 3 secs")
+
+	t.Run("catch specific failure metrics", func(t *testing.T) {
+		s.ResetUsage()
+
+		res := c.RunDockerOrExitError("compose", "-f", "../compose/fixtures/does-not-exist/compose.yml", "build")
+		res.Assert(t, icmd.Expected{ExitCode: 14, Err: "compose/fixtures/does-not-exist/compose.yml: no such file or directory"})
+		res = c.RunDockerOrExitError("compose", "-f", "../compose/fixtures/wrong-composefile/compose.yml", "up", "-d")
+		res.Assert(t, icmd.Expected{ExitCode: 15, Err: "services.simple Additional property wrongField is not allowed"})
+		res = c.RunDockerOrExitError("compose", "up")
+		res.Assert(t, icmd.Expected{ExitCode: 14, Err: "can't find a suitable configuration file in this directory or any parent: not found"})
+
+		usage := s.GetUsage()
+		assert.DeepEqual(t, []string{
+			`{"command":"compose build","context":"moby","source":"cli","status":"file-not-found-failure"}`,
+			`{"command":"compose up","context":"moby","source":"cli","status":"compose-parse-failure"}`,
+			`{"command":"compose up","context":"moby","source":"cli","status":"file-not-found-failure"}`,
+		}, usage)
+	})
+}
+
 func TestContextDuplicateACI(t *testing.T) {
 	c := NewParallelE2eCLI(t, binDir)
 
@@ -224,7 +261,6 @@ func TestContextDuplicateACI(t *testing.T) {
 }
 
 func TestContextRemove(t *testing.T) {
-
 	t.Run("remove current", func(t *testing.T) {
 		c := NewParallelE2eCLI(t, binDir)
 
