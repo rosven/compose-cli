@@ -58,6 +58,8 @@ const (
 	ComposeParseFailureStatus = "compose-parse-failure"
 	// FileNotFoundFailure failure getting compose file
 	FileNotFoundFailure = "file-not-found-failure"
+	// CommandSyntaxFailure failure reading command
+	CommandSyntaxFailure = "command-syntax-failure"
 	// CanceledStatus command canceled
 	CanceledStatus = "canceled"
 )

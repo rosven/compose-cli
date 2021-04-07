@@ -122,6 +122,13 @@ func Command(contextType string) *cobra.Command {
 		Short:            "Docker Compose",
 		Use:              "compose",
 		TraverseChildren: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return cmd.Help()
+			}
+			cmd.Help()
+			return fmt.Errorf("unknown command: %q", "compose "+args[0])
+		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if noAnsi {
 				if ansi != "auto" {

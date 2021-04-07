@@ -286,18 +286,23 @@ $ docker context create %s <name>`, cc.Type(), store.EcsContextType), ctype)
 }
 
 func exit(ctx string, err error, ctype string) {
-	var composeErr errdefs.ComposefileParseError
-	if errors.As(err, &composeErr) {
-		metrics.Track(ctype, os.Args[1:], composeErr.GetMetricsStatus())
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(composeErr.GetExitCode())
-	}
 	if exit, ok := err.(cmd.ExitCodeError); ok {
 		metrics.Track(ctype, os.Args[1:], metrics.SuccessStatus)
 		os.Exit(exit.ExitCode)
 	}
 
-	metrics.Track(ctype, os.Args[1:], metrics.FailureStatus)
+	var composeErr errdefs.ComposefileParseError
+	metricsStatus := metrics.FailureStatus
+	exitCode := 1
+	if errors.As(err, &composeErr) {
+		metricsStatus = composeErr.GetMetricsStatus()
+		exitCode = composeErr.GetExitCode()
+	}
+	if strings.HasPrefix(err.Error(), "unknown shorthand flag:") || strings.HasPrefix(err.Error(), "unknown flag:") || strings.HasPrefix(err.Error(), "unknown command:") {
+		metricsStatus = metrics.CommandSyntaxFailure
+		exitCode = 16
+	}
+	metrics.Track(ctype, os.Args[1:], metricsStatus)
 
 	if errors.Is(err, errdefs.ErrLoginRequired) {
 		fmt.Fprintln(os.Stderr, err)
@@ -315,7 +320,8 @@ func exit(ctx string, err error, ctype string) {
 		os.Exit(1)
 	}
 
-	fatal(err)
+	fmt.Fprintln(os.Stderr, err)
+	os.Exit(exitCode)
 }
 
 func fatal(err error) {

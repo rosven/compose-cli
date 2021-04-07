@@ -239,12 +239,21 @@ func TestComposeMetrics(t *testing.T) {
 		res.Assert(t, icmd.Expected{ExitCode: 15, Err: "services.simple Additional property wrongField is not allowed"})
 		res = c.RunDockerOrExitError("compose", "up")
 		res.Assert(t, icmd.Expected{ExitCode: 14, Err: "can't find a suitable configuration file in this directory or any parent: not found"})
+		res = c.RunDockerOrExitError("compose", "up", "-f", "../compose/fixtures/wrong-composefile/compose.yml")
+		res.Assert(t, icmd.Expected{ExitCode: 16, Err: "unknown shorthand flag: 'f' in -f"})
+		res = c.RunDockerOrExitError("compose", "up", "--file", "../compose/fixtures/wrong-composefile/compose.yml")
+		res.Assert(t, icmd.Expected{ExitCode: 16, Err: "unknown flag: --file"})
+		res = c.RunDockerOrExitError("compose", "donw", "--file", "../compose/fixtures/wrong-composefile/compose.yml")
+		res.Assert(t, icmd.Expected{ExitCode: 16, Err: `unknown command: "compose donw"`})
 
 		usage := s.GetUsage()
 		assert.DeepEqual(t, []string{
 			`{"command":"compose build","context":"moby","source":"cli","status":"file-not-found-failure"}`,
 			`{"command":"compose up","context":"moby","source":"cli","status":"compose-parse-failure"}`,
 			`{"command":"compose up","context":"moby","source":"cli","status":"file-not-found-failure"}`,
+			`{"command":"compose up","context":"moby","source":"cli","status":"command-syntax-failure"}`,
+			`{"command":"compose up","context":"moby","source":"cli","status":"command-syntax-failure"}`,
+			`{"command":"compose","context":"moby","source":"cli","status":"command-syntax-failure"}`,
 		}, usage)
 	})
 }
